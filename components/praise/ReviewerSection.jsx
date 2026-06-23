@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { goalsApi, employeesApi } from '@/lib/api'
 import { REVIEWER_TYPES } from '@/lib/api'
+import { getEmployee } from '@/lib/auth'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,13 +18,14 @@ function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-export function ReviewerSection({ goalNo }) {
+export function ReviewerSection({ goalNo, readOnly }) {
   const [reviewers, setReviewers] = useState([])
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
   const [form, setForm] = useState({ employee_no: '', reviewer_type: '' })
 
   const fetchReviewers = async () => {
@@ -42,8 +44,12 @@ export function ReviewerSection({ goalNo }) {
   }
 
   useEffect(() => {
-    fetchReviewers()
-    fetchEmployees()
+    const init = () => {
+      setCurrentUser(getEmployee())
+      fetchReviewers()
+      fetchEmployees()
+    }
+    init()
   }, [goalNo])
 
   const handleAdd = async () => {
@@ -81,22 +87,29 @@ export function ReviewerSection({ goalNo }) {
     }
   }
 
+  const hasPrimary = reviewers.some(r => parseInt(r.reviewer_type) === 1)
+  const hasSecondary = reviewers.some(r => parseInt(r.reviewer_type) === 2)
+  const isMaxReviewers = hasPrimary && hasSecondary
+
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <UserCheck className="h-4 w-4 text-indigo-600" /> Reviewers
+    <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white font-sans">
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-slate-100">
+        <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-800">
+          <UserCheck className="h-4 w-4 text-primary" /> Reviewers
         </CardTitle>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setDialogOpen(true)}
-          className="h-8 text-xs"
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Reviewer
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setDialogOpen(true)}
+            disabled={isMaxReviewers}
+            className="h-8 text-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add Reviewer
+          </Button>
+        )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         {loading ? (
           <div className="space-y-2">
             {[...Array(2)].map((_, i) => (
@@ -110,29 +123,31 @@ export function ReviewerSection({ goalNo }) {
             ))}
           </div>
         ) : reviewers.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">No reviewers assigned yet.</p>
+          <p className="text-xs text-slate-400 py-4 text-center">No reviewers assigned yet.</p>
         ) : (
           <div className="space-y-2">
             {reviewers.map((r) => (
               <div key={r.reviewer_no} className="flex items-center gap-3 rounded-lg hover:bg-slate-50 p-2 -mx-2">
-                <Avatar className="h-9 w-9 bg-indigo-100">
-                  <AvatarFallback className="bg-indigo-100 text-indigo-700 text-xs font-semibold">
+                <Avatar className="h-9 w-9 bg-slate-100 border border-slate-200">
+                  <AvatarFallback className="bg-slate-100 text-slate-700 text-xs font-semibold">
                     {getInitials((r.reviewer_employee || r.employee)?.employee_name || (r.reviewer_employee || r.employee)?.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">{(r.reviewer_employee || r.employee)?.employee_name || (r.reviewer_employee || r.employee)?.name}</p>
-                  <p className="text-xs text-slate-400">{REVIEWER_TYPES[r.reviewer_type] || 'Reviewer'}</p>
+                  <p className="text-xs font-medium text-slate-800 truncate">{(r.reviewer_employee || r.employee)?.employee_name || (r.reviewer_employee || r.employee)?.name}</p>
+                  <p className="text-[10px] text-slate-400">{REVIEWER_TYPES[r.reviewer_type] || 'Reviewer'}</p>
                 </div>
-                <button
-                  onClick={() => handleRemove(r.reviewer_no)}
-                  disabled={removing === r.reviewer_no}
-                  className="p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  {removing === r.reviewer_no
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Trash2 className="h-4 w-4" />}
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => handleRemove(r.reviewer_no)}
+                    disabled={removing === r.reviewer_no}
+                    className="p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    {removing === r.reviewer_no
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" />}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -153,11 +168,13 @@ export function ReviewerSection({ goalNo }) {
                   <SelectValue placeholder="Select employee…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map((e) => (
-                    <SelectItem key={e.employee_no} value={String(e.employee_no)}>
-                      {e.employee_name || e.name}
-                    </SelectItem>
-                  ))}
+                  {employees
+                    .filter((e) => e.employee_no !== currentUser?.employee_no)
+                    .map((e) => (
+                      <SelectItem key={e.employee_no} value={String(e.employee_no)}>
+                        {e.employee_name || e.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -168,16 +185,22 @@ export function ReviewerSection({ goalNo }) {
                   <SelectValue placeholder="Select type…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(REVIEWER_TYPES).map(([k, v]) => (
-                    <SelectItem key={k} value={String(k)}>{v}</SelectItem>
-                  ))}
+                  {Object.entries(REVIEWER_TYPES)
+                    .filter(([k]) => {
+                      if (parseInt(k) === 1 && hasPrimary) return false
+                      if (parseInt(k) === 2 && hasSecondary) return false
+                      return true
+                    })
+                    .map(([k, v]) => (
+                      <SelectItem key={k} value={String(k)}>{v}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={adding}>Cancel</Button>
-            <Button onClick={handleAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={adding}>
+            <Button onClick={handleAdd} className="bg-primary hover:bg-primary/95 text-white font-semibold" disabled={adding}>
               {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
             </Button>
           </DialogFooter>

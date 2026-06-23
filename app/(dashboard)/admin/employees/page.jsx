@@ -36,21 +36,24 @@ function EmployeeModal({ open, onClose, onSave, initial, clients }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (open) {
-      setForm(initial
-        ? { 
-            name: initial.employee_name || initial.name, 
-            email: initial.employee_email || initial.email, 
-            role: initial.role, 
-            comp_id: String(initial.comp_id || ''),
-            dept_id: initial.dept_id ? String(initial.dept_id) : '',
-            hrm_tuleave_uid: initial.hrm_tuleave_uid ? String(initial.hrm_tuleave_uid) : '',
-            hrm_tuday_id: initial.hrm_tuday_id ? String(initial.hrm_tuday_id) : '',
-            hrm_dingtalk_id: initial.hrm_dingtalk_id || ''
-          }
-        : { name: '', email: '', role: 'employee', comp_id: '', dept_id: '', hrm_tuleave_uid: '', hrm_tuday_id: '', hrm_dingtalk_id: '' }
-      )
+    const init = () => {
+      if (open) {
+        setForm(initial
+          ? { 
+              name: initial.employee_name || initial.name, 
+              email: initial.employee_email || initial.email, 
+              role: initial.role, 
+              comp_id: String(initial.comp_id || ''),
+              dept_id: String(initial.dept_id || ''),
+              hrm_tuleave_uid: String(initial.hrm_tuleave_uid || ''),
+              hrm_tuday_id: String(initial.hrm_tuday_id || ''),
+              hrm_dingtalk_id: String(initial.hrm_dingtalk_id || '')
+            }
+          : { name: '', email: '', role: 'employee', comp_id: '', dept_id: '', hrm_tuleave_uid: '', hrm_tuday_id: '', hrm_dingtalk_id: '' }
+        )
+      }
     }
+    init()
   }, [open, initial])
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: typeof v === 'string' ? v : v.target.value }))
@@ -188,14 +191,17 @@ export default function EmployeesPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { const init = () => fetchData(); init() }, [])
 
   useEffect(() => {
-    if (!search.trim()) { setFiltered(employees); return }
-    const q = search.toLowerCase()
-    setFiltered(employees.filter((e) =>
-      (e.employee_name || e.name)?.toLowerCase().includes(q) || (e.employee_email || e.email)?.toLowerCase().includes(q)
-    ))
+    const init = () => {
+      if (!search.trim()) { setFiltered(employees); return }
+      const q = search.toLowerCase()
+      setFiltered(employees.filter((e) =>
+        (e.employee_name || e.name)?.toLowerCase().includes(q) || (e.employee_email || e.email)?.toLowerCase().includes(q)
+      ))
+    }
+    init()
   }, [search, employees])
 
   const handleToggleStatus = async (emp) => {
@@ -219,9 +225,6 @@ export default function EmployeesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Employees</h2>
           <p className="text-sm text-slate-500 mt-0.5">Manage employee accounts and roles</p>
         </div>
-        <Button onClick={() => { setEditTarget(null); setModal(true) }} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-          <Plus className="mr-2 h-4 w-4" /> Add Employee
-        </Button>
       </div>
 
       <div className="relative max-w-sm">

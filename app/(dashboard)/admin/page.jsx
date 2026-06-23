@@ -39,7 +39,7 @@ export default function AdminPage() {
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Admin Panel</h2>
         </div>
-        <p className="text-sm text-slate-500">Manage your organization's performance system</p>
+        <p className="text-sm text-slate-500">Manage your organization&apos;s performance system</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { goalsApi } from '@/lib/api'
 import { GoalStatusBadge } from '@/components/praise/GoalStatusBadge'
 import { GoalTypeBadge } from '@/components/praise/GoalTypeBadge'
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Target, Calendar, Weight, ArrowRight, ChevronRight } from 'lucide-react'
+import { Plus, Search, Target, Calendar, Weight, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 
 const STATUS_TABS = [
@@ -22,7 +23,10 @@ const STATUS_TABS = [
   { key: 'archived', label: 'Archived', value: 5 },
 ]
 
-export default function GoalsPage() {
+function GoalsContent() {
+  const searchParams = useSearchParams()
+  const isCreatedView = searchParams?.get('created') === 'true'
+
   const [goals, setGoals] = useState([])
   const [filtered, setFiltered] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +36,7 @@ export default function GoalsPage() {
   const fetchGoals = async () => {
     setLoading(true)
     try {
-      const res = await goalsApi.list()
+      const res = await goalsApi.list(isCreatedView ? { created_by_me: true } : {})
       const data = res.data?.goals || res.data?.data || (Array.isArray(res.data) ? res.data : [])
       setGoals(data)
       setFiltered(data)
@@ -44,23 +48,27 @@ export default function GoalsPage() {
   }
 
   useEffect(() => {
-    fetchGoals()
-  }, [])
+    const init = () => fetchGoals()
+    init()
+  }, [isCreatedView])
 
   useEffect(() => {
-    let result = goals
+    const init = () => {
+      let result = goals
 
-    const tab = STATUS_TABS.find((t) => t.key === activeTab)
-    if (tab?.value !== null && tab?.value !== undefined) {
-      result = result.filter((g) => g.status === tab.value)
+      const tab = STATUS_TABS.find((t) => t.key === activeTab)
+      if (tab?.value !== null && tab?.value !== undefined) {
+        result = result.filter((g) => g.status === tab.value)
+      }
+
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        result = result.filter((g) => g.goal_name?.toLowerCase().includes(q))
+      }
+
+      setFiltered(result)
     }
-
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter((g) => g.goal_name?.toLowerCase().includes(q))
-    }
-
-    setFiltered(result)
+    init()
   }, [goals, activeTab, search])
 
   return (
@@ -68,12 +76,16 @@ export default function GoalsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">My Goals</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Track and manage your performance goals</p>
+          <h2 className="text-xl font-bold text-slate-900">
+            {isCreatedView ? 'Created Goals' : 'My Goals'}
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {isCreatedView ? 'Goals created by you for yourself or other team members' : 'Track and manage your performance goals'}
+          </p>
         </div>
         <Link href="/goals/new">
-          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button className="bg-primary hover:bg-primary/95 text-white shadow-sm h-9 text-xs font-semibold">
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
             New Goal
           </Button>
         </Link>
@@ -127,19 +139,19 @@ export default function GoalsPage() {
       ) : filtered.length === 0 ? (
         <Card className="border-slate-200 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 mb-4">
-              <Target className="h-8 w-8 text-indigo-400" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 border border-slate-100 mb-4">
+              <Target className="h-8 w-8 text-slate-400" />
             </div>
-            <p className="font-semibold text-slate-700 text-base">
+            <p className="font-semibold text-slate-700 text-sm">
               {search ? 'No goals match your search' : 'No goals yet'}
             </p>
-            <p className="mt-1 text-sm text-slate-400 max-w-xs">
-              {search ? 'Try a different search term or filter.' : 'Create your first goal to start tracking your performance.'}
+            <p className="mt-1 text-xs text-slate-400 max-w-xs">
+              {search ? 'Try a different search term or filter.' : 'Create your first goal to start tracking performance.'}
             </p>
             {!search && (
               <Link href="/goals/new" className="mt-5">
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                  <Plus className="mr-2 h-4 w-4" /> Create Goal
+                <Button className="bg-primary hover:bg-primary/95 text-white h-8 text-xs font-semibold">
+                  <Plus className="mr-1.5 h-3 w-3" /> Create Goal
                 </Button>
               </Link>
             )}
@@ -149,18 +161,18 @@ export default function GoalsPage() {
         <div className="space-y-3">
           {filtered.map((goal) => (
             <Link key={goal.goal_no} href={`/goals/${goal.goal_no}`}>
-              <Card className="border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group">
+              <Card className="border-slate-200 shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 group-hover:bg-indigo-100 transition-colors">
-                      <Target className="h-6 w-6 text-indigo-600" />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/60 group-hover:bg-slate-200 transition-colors">
+                      <Target className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-slate-800 leading-snug group-hover:text-indigo-700 transition-colors">
+                        <p className="font-semibold text-slate-800 leading-snug group-hover:text-primary transition-colors text-sm">
                           {goal.goal_name}
                         </p>
-                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary/75 shrink-0 mt-0.5 transition-colors" />
                       </div>
                       <p className="text-xs text-slate-400 mt-1">
                         {goal.cycle?.cycle_name || 'No cycle'}
@@ -170,7 +182,7 @@ export default function GoalsPage() {
                         <GoalStatusBadge status={goal.status} />
                         <span className="flex items-center gap-1 text-xs text-slate-500">
                           <Weight className="h-3 w-3" />
-                          {goal.weight}%
+                          Weight: {goal.weight}
                         </span>
                         {goal.deadline && (
                           <span className="flex items-center gap-1 text-xs text-slate-500">
@@ -188,5 +200,13 @@ export default function GoalsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function GoalsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading goals...</div>}>
+      <GoalsContent />
+    </Suspense>
   )
 }

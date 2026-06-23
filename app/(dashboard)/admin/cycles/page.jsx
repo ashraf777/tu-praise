@@ -20,7 +20,10 @@ function CycleModal({ open, onClose, onSave, clients }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (open) setForm({ cycle_name: '', comp_id: '', year: new Date().getFullYear().toString(), start_date: '', end_date: '' })
+    const init = () => {
+      if (open) setForm({ cycle_name: '', comp_id: '', year: new Date().getFullYear().toString(), start_date: '', end_date: '' })
+    }
+    init()
   }, [open])
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: typeof v === 'string' ? v : v.target.value }))
@@ -125,7 +128,7 @@ export default function CyclesPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { const init = () => fetchData(); init() }, [])
 
   const handleToggleStatus = async (cycle) => {
     const newStatus = cycle.status === 1 ? 0 : 1

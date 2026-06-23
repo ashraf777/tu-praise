@@ -32,37 +32,43 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Override hardcoded Tailwind indigo color utilities for standard buttons/highlights */
+  --color-indigo-50: #f4f6f9;
+  --color-indigo-100: #d1ecf1;
+  --color-indigo-600: #007bff;
+  --color-indigo-700: #0056b3;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --radius: 0.25rem; /* AdminLTE has smaller corner radius */
+  --background: #f4f6f9; /* AdminLTE light gray background */
+  --foreground: #212529; /* AdminLTE dark text */
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #212529;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #4f46e5;
+  --popover-foreground: #212529;
+  --primary: #007bff; /* AdminLTE blue */
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #eef2ff;
-  --accent-foreground: #4338ca;
-  --destructive: #ef4444;
+  --secondary: #e2e6ea;
+  --secondary-foreground: #212529;
+  --muted: #f8f9fa;
+  --muted-foreground: #6c757d;
+  --accent: #e2e6ea;
+  --accent-foreground: #007bff;
+  --destructive: #dc3545; /* AdminLTE danger red */
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
-  --sidebar: #1e1b4b;
-  --sidebar-foreground: #e0e7ff;
-  --sidebar-primary: #4f46e5;
+  --border: #dee2e6;
+  --input: #dee2e6;
+  --ring: #007bff;
+  --sidebar: #343a40; /* AdminLTE Dark Sidebar bg */
+  --sidebar-foreground: #c2c7d0; /* AdminLTE Sidebar text */
+  --sidebar-primary: #007bff; /* Active sidebar color */
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #312e81;
-  --sidebar-accent-foreground: #c7d2fe;
-  --sidebar-border: #312e81;
-  --sidebar-ring: #818cf8;
+  --sidebar-accent: #495057; /* Hover sidebar color */
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #4b545c;
+  --sidebar-ring: #007bff;
 }
 
 * {

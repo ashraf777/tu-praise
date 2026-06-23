@@ -15,15 +15,18 @@ export function AppShell({ children }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-    const params = new URLSearchParams(window.location.search)
-    const ctxParam = params.get('ctx') || 'web'
-    setCtx(ctxParam)
+    const init = () => {
+      setMounted(true)
+      const params = new URLSearchParams(window.location.search)
+      const ctxParam = params.get('ctx') || 'web'
+      setCtx(ctxParam)
 
-    // Auth check
-    if (!isLoggedIn()) {
-      router.replace('/login')
+      // Auth check
+      if (!isLoggedIn()) {
+        router.replace('/login')
+      }
     }
+    init()
   }, [router])
 
   if (!mounted) {

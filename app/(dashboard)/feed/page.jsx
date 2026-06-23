@@ -65,7 +65,7 @@ function FeedItem({ item }) {
         <p className="mt-1 text-sm text-slate-600">
           <span className="text-slate-500">{item.feed_type?.post_type_desc || item.feed_type_desc || item.description || 'Updated a goal'}</span>
           {item.goal?.goal_name && (
-            <span className="ml-1 font-medium text-slate-800">"{item.goal.goal_name}"</span>
+            <span className="ml-1 font-medium text-slate-800">&quot;{item.goal.goal_name}&quot;</span>
           )}
         </p>
       </div>
@@ -93,7 +93,8 @@ export default function FeedPage() {
   }
 
   useEffect(() => {
-    fetchFeed()
+    const init = () => fetchFeed()
+    init()
   }, [])
 
   return (

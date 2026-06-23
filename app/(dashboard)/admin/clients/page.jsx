@@ -18,7 +18,10 @@ function ClientModal({ open, onClose, onSave, initial }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (open) setName(initial?.client_name || '')
+    const init = () => {
+      if (open) setName(initial?.client_name || '')
+    }
+    init()
   }, [open, initial])
 
   const handleSave = async () => {
@@ -85,7 +88,7 @@ export default function ClientsPage() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchClients() }, [])
+  useEffect(() => { const init = () => fetchClients(); init() }, [])
 
   const handleToggleStatus = async (client) => {
     const newStatus = client.status === 1 ? 0 : 1
@@ -108,9 +111,6 @@ export default function ClientsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Clients</h2>
           <p className="text-sm text-slate-500 mt-0.5">Manage client organizations</p>
         </div>
-        <Button onClick={() => { setEditTarget(null); setModal(true) }} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-          <Plus className="mr-2 h-4 w-4" /> Add Client
-        </Button>
       </div>
 
       <Card className="border-slate-200 shadow-sm">
@@ -132,12 +132,6 @@ export default function ClientsPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Building2 className="h-12 w-12 text-slate-200 mb-4" />
               <p className="font-semibold text-slate-600">No clients yet</p>
-              <Button
-                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white"
-                onClick={() => { setEditTarget(null); setModal(true) }}
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add First Client
-              </Button>
             </div>
           ) : (
             <Table>

@@ -69,7 +69,7 @@ export default function TeamPage() {
                 <Users className="h-7 w-7 text-indigo-400" />
               </div>
               <p className="font-semibold text-slate-700">No team goals</p>
-              <p className="text-sm text-slate-400 mt-1">You haven't been assigned as a reviewer for any goals yet.</p>
+              <p className="text-sm text-slate-400 mt-1">You haven&apos;t been assigned as a reviewer for any goals yet.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

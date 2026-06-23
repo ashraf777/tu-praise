@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { goalsApi } from '@/lib/api'
+import { getEmployee } from '@/lib/auth'
 import { GoalStatusBadge } from '@/components/praise/GoalStatusBadge'
 import { GoalTypeBadge } from '@/components/praise/GoalTypeBadge'
 import { ReviewerSection } from '@/components/praise/ReviewerSection'
@@ -18,10 +19,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Target, Calendar, Weight, ChevronDown, ChevronUp,
+  ArrowLeft, Target, Calendar, ChevronDown, ChevronUp,
   Loader2, CheckCircle2, XCircle, Archive, BarChart3, Clock
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 // Format changes for History
 const formatChanges = (beforeStr, afterStr) => {
@@ -31,7 +33,9 @@ const formatChanges = (beforeStr, afterStr) => {
     const changes = []
     for (const key in after) {
       if (before[key] !== after[key]) {
-        changes.push(`${key}: ${before[key] ?? 'none'} → ${after[key] ?? 'none'}`)
+        const keyLabel = key.replace(/_/g, ' ')
+        const formatVal = (v) => (v !== null && v !== undefined && !isNaN(v) && key.includes('value') ? Number(v).toLocaleString() : v)
+        changes.push(`${keyLabel}: ${formatVal(before[key]) ?? 'none'} → ${formatVal(after[key]) ?? 'none'}`)
       }
     }
     return changes.length ? changes.join(' \n ') : ''
@@ -72,7 +76,31 @@ function HistoryTimeline({ history, open }) {
 // Action dialog for baseline/result update
 function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
   const [values, setValues] = useState({})
-  const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
+  const [displayValues, setDisplayValues] = useState({})
+
+  useEffect(() => {
+    const init = () => {
+      if (open) {
+        setValues({})
+        setDisplayValues({})
+      }
+    }
+    init()
+  }, [open])
+
+  const handleChange = (key, isNumeric) => (e) => {
+    const raw = e.target.value
+    if (isNumeric) {
+      const clean = raw.replace(/,/g, '')
+      if (clean === '' || /^\d+$/.test(clean)) {
+        setDisplayValues(d => ({ ...d, [key]: clean ? Number(clean).toLocaleString() : '' }))
+        setValues(v => ({ ...v, [key]: clean ? parseInt(clean, 10) : '' }))
+      }
+    } else {
+      setValues(v => ({ ...v, [key]: raw }))
+      setDisplayValues(d => ({ ...d, [key]: raw }))
+    }
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -87,21 +115,25 @@ function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
           <DialogDescription>Fill in the required information below.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {fields.map((field) => (
-            <div key={field.key} className="space-y-2">
-              <Label htmlFor={field.key}>{field.label}</Label>
-              <Input
-                id={field.key}
-                type={field.type || 'text'}
-                placeholder={field.placeholder}
-                onChange={set(field.key)}
-                className="h-10"
-              />
-            </div>
-          ))}
+          {fields.map((field) => {
+            const isNumeric = field.key.includes('value')
+            return (
+              <div key={field.key} className="space-y-2">
+                <Label htmlFor={field.key}>{field.label}</Label>
+                <Input
+                  id={field.key}
+                  type="text"
+                  placeholder={field.placeholder}
+                  value={isNumeric ? (displayValues[field.key] || '') : (values[field.key] || '')}
+                  onChange={handleChange(field.key, isNumeric)}
+                  className="h-10"
+                />
+              </div>
+            )
+          })}
           <DialogFooter className="mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={loading}>
+            <Button type="submit" className="bg-primary hover:bg-primary/95 text-white font-semibold" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
             </Button>
           </DialogFooter>
@@ -121,6 +153,7 @@ export default function GoalDetailPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [dialog, setDialog] = useState(null) // 'baseline' | 'result'
+  const [currentUser, setCurrentUser] = useState(null)
 
   const fetchGoal = async () => {
     try {
@@ -139,7 +172,11 @@ export default function GoalDetailPage() {
   }
 
   useEffect(() => {
-    fetchGoal()
+    const init = () => {
+      setCurrentUser(getEmployee())
+      fetchGoal()
+    }
+    init()
   }, [goal_no])
 
   const handleStatusChange = async (status) => {
@@ -187,8 +224,8 @@ export default function GoalDetailPage() {
   const getBaselineFields = () => {
     const gt = goal?.goal_type
     if (gt === 1) return [
-      { key: 'start_value', label: 'Start Value', type: 'number', placeholder: '0' },
-      { key: 'target_value', label: 'Target Value', type: 'number', placeholder: '100' },
+      { key: 'start_value', label: 'Start Value', placeholder: '0' },
+      { key: 'target_value', label: 'Target Value', placeholder: '100' },
     ]
     if (gt === 2) return [
       { key: 'start_date', label: 'Start Date', type: 'date' },
@@ -203,7 +240,7 @@ export default function GoalDetailPage() {
 
   const getResultFields = () => {
     const gt = goal?.goal_type
-    if (gt === 1) return [{ key: 'achieved_value', label: 'Achieved Value', type: 'number', placeholder: '0' }]
+    if (gt === 1) return [{ key: 'achieved_value', label: 'Achieved Value', placeholder: '0' }]
     if (gt === 2) return [{ key: 'achieved_date', label: 'Achieved Date', type: 'date' }]
     if (gt === 3) return [{ key: 'achieved_state', label: 'Achieved State', placeholder: 'e.g. Completed' }]
     return []
@@ -239,20 +276,27 @@ export default function GoalDetailPage() {
 
   const status = goal.status
 
+  const formatNumber = (val) => {
+    if (val === null || val === undefined) return '—'
+    return Number(val).toLocaleString()
+  }
+
+  const isReadOnly = goal && currentUser && parseInt(goal.created_by) === parseInt(currentUser.employee_no) && parseInt(goal.employee_no) !== parseInt(currentUser.employee_no)
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       {/* Back */}
-      <Link href="/goals" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+      <Link href="/goals" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-primary transition-colors">
         <ArrowLeft className="h-4 w-4" /> Back to Goals
       </Link>
 
       {/* Goal info card */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white">
         <CardContent className="p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50">
-                <Target className="h-6 w-6 text-indigo-600" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 text-slate-600">
+                <Target className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold text-slate-900 leading-tight">{goal.goal_name}</h2>
@@ -269,7 +313,7 @@ export default function GoalDetailPage() {
           <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Weight</p>
-              <p className="mt-1 font-semibold text-slate-800">{goal.weight}%</p>
+              <p className="mt-1 font-semibold text-slate-800">{goal.weight}</p>
             </div>
             {goal.deadline && (
               <div>
@@ -303,22 +347,22 @@ export default function GoalDetailPage() {
 
       {/* Progress section */}
       {status >= 2 && (
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="pb-3">
+        <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white">
+          <CardHeader className="pb-3 border-b border-slate-100">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-indigo-600" /> Progress
+              <BarChart3 className="h-4 w-4 text-primary" /> Progress
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-4 space-y-4">
             {goal.goal_type === 1 && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Start: {goal.start_value ?? '—'}</span>
+                  <span className="text-slate-500">Start: {formatNumber(goal.start_value)}</span>
                   <span className="text-slate-800 font-semibold">
-                    Achieved: {goal.achieved_value ?? '—'} / {goal.target_value ?? '—'}
+                    Achieved: {formatNumber(goal.achieved_value)} / {formatNumber(goal.target_value)}
                   </span>
                 </div>
-                <Progress value={getValueProgress()} className="h-3" />
+                <Progress value={getValueProgress()} className="h-3 bg-slate-100" />
                 <p className="text-xs text-slate-400 text-right">{getValueProgress().toFixed(1)}%</p>
               </div>
             )}
@@ -332,9 +376,9 @@ export default function GoalDetailPage() {
                   <p className="text-xs text-slate-400 mb-1">Achieved</p>
                   <p className="font-semibold text-green-700">{goal.achieved_date ? format(new Date(goal.achieved_date), 'MMM d, yyyy') : '—'}</p>
                 </div>
-                <div className="rounded-lg bg-indigo-50 p-3">
+                <div className="rounded-lg bg-indigo-50/50 p-3">
                   <p className="text-xs text-slate-400 mb-1">Target Date</p>
-                  <p className="font-semibold text-indigo-700">{goal.target_date ? format(new Date(goal.target_date), 'MMM d, yyyy') : '—'}</p>
+                  <p className="font-semibold text-primary">{goal.target_date ? format(new Date(goal.target_date), 'MMM d, yyyy') : '—'}</p>
                 </div>
               </div>
             )}
@@ -348,9 +392,9 @@ export default function GoalDetailPage() {
                   <p className="text-xs text-slate-400 mb-1">Achieved</p>
                   <p className="font-semibold text-green-700">{goal.achieved_state || '—'}</p>
                 </div>
-                <div className="rounded-lg bg-indigo-50 p-3">
+                <div className="rounded-lg bg-indigo-50/50 p-3">
                   <p className="text-xs text-slate-400 mb-1">Target State</p>
-                  <p className="font-semibold text-indigo-700">{goal.target_state || '—'}</p>
+                  <p className="font-semibold text-primary">{goal.target_state || '—'}</p>
                 </div>
               </div>
             )}
@@ -359,84 +403,86 @@ export default function GoalDetailPage() {
       )}
 
       {/* Action buttons */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2">
-            {status === 1 && (
-              <>
-                <Button
-                  onClick={() => setDialog('baseline')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  disabled={actionLoading}
-                >
-                  Set Baseline
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusChange(5)}
-                  disabled={actionLoading}
-                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                >
-                  <Archive className="mr-2 h-4 w-4" /> Archive
-                </Button>
-              </>
-            )}
-            {status === 2 && (
-              <>
-                <Button
-                  onClick={() => setDialog('result')}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  disabled={actionLoading}
-                >
-                  Update Result
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusChange(3)}
-                  disabled={actionLoading}
-                  className="border-green-300 text-green-700 hover:bg-green-50"
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" /> Mark Successful
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusChange(4)}
-                  disabled={actionLoading}
-                  className="border-red-300 text-red-700 hover:bg-red-50"
-                >
-                  <XCircle className="mr-2 h-4 w-4" /> Mark Failed
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusChange(5)}
-                  disabled={actionLoading}
-                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                >
-                  <Archive className="mr-2 h-4 w-4" /> Archive
-                </Button>
-              </>
-            )}
-            {actionLoading && <Loader2 className="h-5 w-5 animate-spin text-indigo-600 self-center" />}
-          </div>
-        </CardContent>
-      </Card>
+      {!isReadOnly && (
+        <Card className="border border-slate-200 shadow-sm rounded-none bg-white">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap gap-2">
+              {status === 1 && (
+                <>
+                  <Button
+                    onClick={() => setDialog('baseline')}
+                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
+                    disabled={actionLoading}
+                  >
+                    Set Baseline
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange(5)}
+                    disabled={actionLoading}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <Archive className="mr-2 h-4 w-4" /> Archive
+                  </Button>
+                </>
+              )}
+              {status === 2 && (
+                <>
+                  <Button
+                    onClick={() => setDialog('result')}
+                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
+                    disabled={actionLoading}
+                  >
+                    Update Result
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange(3)}
+                    disabled={actionLoading}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Mark Successful
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange(4)}
+                    disabled={actionLoading}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" /> Mark Failed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStatusChange(5)}
+                    disabled={actionLoading}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <Archive className="mr-2 h-4 w-4" /> Archive
+                  </Button>
+                </>
+              )}
+              {actionLoading && <Loader2 className="h-5 w-5 animate-spin text-primary self-center" />}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Reviewers */}
-      <ReviewerSection goalNo={goal_no} />
+      <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} />
 
       {/* Comments */}
-      <CommentThread goalNo={goal_no} />
+      <CommentThread goalNo={goal_no} readOnly={isReadOnly} />
 
       {/* History */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border border-slate-200 shadow-sm rounded-none bg-white">
         <CardContent className="p-4">
           <button
             type="button"
             onClick={() => setHistoryOpen((v) => !v)}
-            className="flex w-full items-center justify-between text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors"
+            className="flex w-full items-center justify-between text-sm font-semibold text-slate-700 hover:text-primary transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Change History
+              <Clock className="h-4 w-4 text-slate-400" /> Change History
               <span className="text-xs font-normal text-slate-400">({history.length})</span>
             </span>
             {historyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

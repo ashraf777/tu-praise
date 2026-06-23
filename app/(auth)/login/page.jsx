@@ -2,20 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Award, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Mail, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { authApi, saveAuth } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,7 +31,7 @@ export default function LoginPage() {
       const { token, employee } = res.data
 
       saveAuth(token, employee)
-      toast.success(`Welcome back, ${employee.name}!`)
+      toast.success(`Welcome back, ${employee.name || employee.employee_name}!`)
 
       if (employee.must_change_pass === 1) {
         router.replace('/change-password')
@@ -51,91 +48,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo / Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg mb-4">
-            <Award className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">TU Praise</h1>
-          <p className="mt-1.5 text-slate-500 text-sm">Performance Management System</p>
+    <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* AdminLTE style Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-light text-slate-800 tracking-tight">
+            <span className="font-bold">TU</span>Praise
+          </h1>
         </div>
 
-        <Card className="shadow-xl border-slate-200">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-semibold text-slate-800">Sign in to your account</CardTitle>
-            <CardDescription>Enter your credentials to continue</CardDescription>
+        <Card className="rounded-none border border-slate-200 shadow-md bg-white">
+          <CardHeader className="pb-4 pt-6 text-center">
+            <CardDescription className="text-slate-600 text-sm">Sign in to start your session</CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pb-6">
               {/* Error alert */}
               {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                <div className="rounded bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-700">
                   {error}
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
+              {/* Email Address */}
+              <div className="space-y-1 relative">
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   autoComplete="email"
-                  className="h-11"
+                  className="h-10 pr-10 rounded-none border-slate-300 focus:border-primary"
                 />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    autoComplete="current-password"
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+              {/* Password */}
+              <div className="space-y-1 relative">
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  autoComplete="current-password"
+                  className="h-10 pr-10 rounded-none border-slate-300 focus:border-primary"
+                />
+                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  className="w-full h-10 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-none shadow-sm cursor-pointer"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in…
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
               </div>
             </CardContent>
-
-            <CardFooter>
-              <Button
-                type="submit"
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  'Sign in'
-                )}
-              </Button>
-            </CardFooter>
           </form>
         </Card>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="text-center text-[10px] text-slate-400 mt-6">
           © {new Date().getFullYear()} TU Praise · All rights reserved
         </p>
       </div>
