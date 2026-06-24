@@ -39,16 +39,16 @@ function EmployeeModal({ open, onClose, onSave, initial, clients }) {
     const init = () => {
       if (open) {
         setForm(initial
-          ? { 
-              name: initial.employee_name || initial.name, 
-              email: initial.employee_email || initial.email, 
-              role: initial.role, 
-              comp_id: String(initial.comp_id || ''),
-              dept_id: String(initial.dept_id || ''),
-              hrm_tuleave_uid: String(initial.hrm_tuleave_uid || ''),
-              hrm_tuday_id: String(initial.hrm_tuday_id || ''),
-              hrm_dingtalk_id: String(initial.hrm_dingtalk_id || '')
-            }
+          ? {
+            name: initial.employee_name || initial.name,
+            email: initial.employee_email || initial.email,
+            role: initial.role,
+            comp_id: String(initial.comp_id || ''),
+            dept_id: String(initial.dept_id || ''),
+            hrm_tuleave_uid: String(initial.hrm_tuleave_uid || ''),
+            hrm_tuday_id: String(initial.hrm_tuday_id || ''),
+            hrm_dingtalk_id: String(initial.hrm_dingtalk_id || '')
+          }
           : { name: '', email: '', role: 'employee', comp_id: '', dept_id: '', hrm_tuleave_uid: '', hrm_tuday_id: '', hrm_dingtalk_id: '' }
         )
       }
@@ -65,10 +65,10 @@ function EmployeeModal({ open, onClose, onSave, initial, clients }) {
     }
     setSaving(true)
     try {
-      const payload = { 
-        employee_name: form.name, 
-        employee_email: form.email, 
-        role: form.role, 
+      const payload = {
+        employee_name: form.name,
+        employee_email: form.email,
+        role: form.role,
         comp_id: parseInt(form.comp_id),
         dept_id: form.dept_id ? parseInt(form.dept_id) : null,
         hrm_tuleave_uid: form.hrm_tuleave_uid ? parseInt(form.hrm_tuleave_uid) : null,
@@ -302,13 +302,13 @@ export default function EmployeesPage() {
                       </TableCell>
                       <TableCell className="pr-6">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
+                          {/* <Button
                             variant="ghost" size="sm"
                             className="h-8 px-3 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
                             onClick={() => { setEditTarget(emp); setModal(true) }}
                           >
                             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                          </Button>
+                          </Button> */}
                           <Button
                             variant="ghost" size="sm" className="h-8 px-3"
                             onClick={() => handleToggleStatus(emp)}
