@@ -88,21 +88,50 @@ function HistoryTimeline({ history, open }) {
 }
 
 // Action dialog for baseline/result update
-function ActionDialog({ open, onClose, title, fields, onSubmit, loading, isBaseline }) {
+function ActionDialog({ open, onClose, title, fields, onSubmit, loading, isBaseline, goal }) {
   const [values, setValues] = useState({})
   const [displayValues, setDisplayValues] = useState({})
   const [reason, setReason] = useState('')
 
   useEffect(() => {
     const init = () => {
-      if (open) {
+      if (open && goal) {
+        const initialValues = {}
+        const initialDisplay = {}
+        fields.forEach(field => {
+          let val = goal[field.key]
+          if (val === null || val === undefined) {
+            if (field.key === 'achieved_value') {
+              val = goal.start_value !== null && goal.start_value !== undefined ? goal.start_value : ''
+            } else if (field.key === 'achieved_date') {
+              val = goal.achieved_date ? goal.achieved_date.split('T')[0] : (goal.deadline ? goal.deadline.split('T')[0] : '')
+            } else if (field.key === 'achieved_state') {
+              val = goal.start_state !== null && goal.start_state !== undefined ? goal.start_state : ''
+            } else {
+              val = ''
+            }
+          } else if (field.type === 'date' || field.key.includes('date')) {
+            val = val.split('T')[0]
+          }
+          
+          initialValues[field.key] = val
+          if (field.key.includes('value') && val !== '') {
+            initialDisplay[field.key] = Number(val).toLocaleString()
+          } else {
+            initialDisplay[field.key] = val
+          }
+        })
+        setValues(initialValues)
+        setDisplayValues(initialDisplay)
+        setReason('')
+      } else if (open) {
         setValues({})
         setDisplayValues({})
         setReason('')
       }
     }
     init()
-  }, [open])
+  }, [open, goal, fields])
 
   const handleChange = (key, isNumeric) => (e) => {
     const raw = e.target.value
@@ -815,6 +844,7 @@ export default function GoalDetailPage() {
         onSubmit={handleDialogSubmit}
         loading={actionLoading}
         isBaseline={true}
+        goal={goal}
       />
       <ActionDialog
         open={dialog === 'result'}
@@ -824,6 +854,7 @@ export default function GoalDetailPage() {
         onSubmit={handleDialogSubmit}
         loading={actionLoading}
         isBaseline={false}
+        goal={goal}
       />
 
       <EditGoalDialog
