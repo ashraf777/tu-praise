@@ -84,7 +84,7 @@ export default function ClientsPage() {
     try {
       const res = await clientsApi.list()
       setClients(res.data?.clients || res.data?.data || (Array.isArray(res.data) ? res.data : []))
-    } catch {}
+    } catch { }
     finally { setLoading(false) }
   }
 
@@ -165,14 +165,14 @@ export default function ClientsPage() {
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           className="h-8 px-3 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
                           onClick={() => { setEditTarget(client); setModal(true) }}
                         >
                           <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                        </Button>
+                        </Button> */}
                         <Button
                           variant="ghost"
                           size="sm"
