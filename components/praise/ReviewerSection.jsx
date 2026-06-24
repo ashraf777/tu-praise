@@ -18,7 +18,7 @@ function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-export function ReviewerSection({ goalNo, readOnly }) {
+export function ReviewerSection({ goalNo, readOnly, status }) {
   const [reviewers, setReviewers] = useState([])
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
@@ -91,13 +91,15 @@ export function ReviewerSection({ goalNo, readOnly }) {
   const hasSecondary = reviewers.some(r => parseInt(r.reviewer_type) === 2)
   const isMaxReviewers = hasPrimary && hasSecondary
 
+  const isLocked = readOnly || (parseInt(status) >= 2)
+
   return (
     <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white font-sans">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 border-b border-slate-100">
         <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-800">
           <UserCheck className="h-4 w-4 text-primary" /> Reviewers
         </CardTitle>
-        {!readOnly && (
+        {!isLocked && (
           <Button
             size="sm"
             variant="outline"
@@ -137,7 +139,7 @@ export function ReviewerSection({ goalNo, readOnly }) {
                   <p className="text-xs font-medium text-slate-800 truncate">{(r.reviewer_employee || r.employee)?.employee_name || (r.reviewer_employee || r.employee)?.name}</p>
                   <p className="text-[10px] text-slate-400">{REVIEWER_TYPES[r.reviewer_type] || 'Reviewer'}</p>
                 </div>
-                {!readOnly && (
+                {!isLocked && (
                   <button
                     onClick={() => handleRemove(r.reviewer_no)}
                     disabled={removing === r.reviewer_no}

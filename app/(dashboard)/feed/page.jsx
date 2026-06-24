@@ -37,7 +37,7 @@ function getInitials(name = '') {
 }
 
 function FeedItem({ item }) {
-  const typeId = item.feed_type || item.type_id
+  const typeId = item.feed_type_no || item.feed_type?.post_type_no || item.type_id
   const Icon = FEED_ICONS[typeId] || Target
   const colorClass = FEED_COLORS[typeId] || 'bg-slate-100 text-slate-600'
 
@@ -63,11 +63,18 @@ function FeedItem({ item }) {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-600">
-          <span className="text-slate-500">{item.feed_type?.post_type_desc || item.feed_type_desc || item.description || 'Updated a goal'}</span>
+          <span className="text-slate-500">
+            {item.feed_type?.desc || item.feed_type?.post_type_desc || item.feed_type_desc || item.description || 'Updated a goal'}
+          </span>
           {item.goal?.goal_name && (
             <span className="ml-1 font-medium text-slate-800">&quot;{item.goal.goal_name}&quot;</span>
           )}
         </p>
+        {item.remark && (
+          <p className="mt-1.5 text-xs text-slate-500 border-l-2 border-slate-200 pl-2 italic">
+            &ldquo;{item.remark}&rdquo;
+          </p>
+        )}
       </div>
     </div>
   )

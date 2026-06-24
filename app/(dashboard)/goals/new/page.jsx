@@ -100,7 +100,7 @@ export default function NewGoalPage() {
     const payload = {
       cycle_no: parseInt(form.cycle_no),
       goal_name: form.goal_name,
-      description: form.description,
+      desc: form.description,
       how_to_measure: form.how_to_measure,
       weight: parseInt(form.weight, 10),
       deadline: form.deadline || null,

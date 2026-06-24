@@ -123,7 +123,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-[10px] text-slate-400 mt-6">
-          © {new Date().getFullYear()} TU Praise · All rights reserved
+          © {new Date().getFullYear()} TU Praise · All rights reserved · <span className="text-[10px] text-slate-400 mt-1 select-none">v1.0.1</span>
         </p>
       </div>
     </div>

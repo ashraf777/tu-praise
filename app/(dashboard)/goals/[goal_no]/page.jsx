@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { goalsApi } from '@/lib/api'
+import { goalsApi, GOAL_STATUSES } from '@/lib/api'
 import { getEmployee } from '@/lib/auth'
 import { GoalStatusBadge } from '@/components/praise/GoalStatusBadge'
 import { GoalTypeBadge } from '@/components/praise/GoalTypeBadge'
@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Target, Calendar, ChevronDown, ChevronUp,
@@ -25,20 +26,33 @@ import {
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
-// Format changes for History
 const formatChanges = (beforeStr, afterStr) => {
   try {
     const before = JSON.parse(beforeStr || '{}')
     const after = JSON.parse(afterStr || '{}')
     const changes = []
+    let reason = ''
     for (const key in after) {
+      if (key === 'reason') {
+        reason = after[key]
+        continue
+      }
       if (before[key] !== after[key]) {
         const keyLabel = key.replace(/_/g, ' ')
-        const formatVal = (v) => (v !== null && v !== undefined && !isNaN(v) && key.includes('value') ? Number(v).toLocaleString() : v)
+        const formatVal = (v) => {
+          if (key === 'status') {
+            return GOAL_STATUSES[v]?.label || v
+          }
+          return (v !== null && v !== undefined && !isNaN(v) && key.includes('value') ? Number(v).toLocaleString() : v)
+        }
         changes.push(`${keyLabel}: ${formatVal(before[key]) ?? 'none'} → ${formatVal(after[key]) ?? 'none'}`)
       }
     }
-    return changes.length ? changes.join(' \n ') : ''
+    let res = changes.length ? changes.join(' \n ') : ''
+    if (reason) {
+      res = (res ? res + ' \n ' : '') + `Remark: "${reason}"`
+    }
+    return res
   } catch (e) {
     return ''
   }
@@ -74,15 +88,17 @@ function HistoryTimeline({ history, open }) {
 }
 
 // Action dialog for baseline/result update
-function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
+function ActionDialog({ open, onClose, title, fields, onSubmit, loading, isBaseline }) {
   const [values, setValues] = useState({})
   const [displayValues, setDisplayValues] = useState({})
+  const [reason, setReason] = useState('')
 
   useEffect(() => {
     const init = () => {
       if (open) {
         setValues({})
         setDisplayValues({})
+        setReason('')
       }
     }
     init()
@@ -104,7 +120,11 @@ function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit(values)
+    if (isBaseline && !reason.trim()) {
+      toast.error('Remark/Reason is required')
+      return
+    }
+    onSubmit({ ...values, reason })
   }
 
   return (
@@ -122,7 +142,7 @@ function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
                 <Label htmlFor={field.key}>{field.label}</Label>
                 <Input
                   id={field.key}
-                  type="text"
+                  type={field.type || "text"}
                   placeholder={field.placeholder}
                   value={isNumeric ? (displayValues[field.key] || '') : (values[field.key] || '')}
                   onChange={handleChange(field.key, isNumeric)}
@@ -131,9 +151,199 @@ function ActionDialog({ open, onClose, title, fields, onSubmit, loading }) {
               </div>
             )
           })}
+          {isBaseline && (
+            <div className="space-y-2">
+              <Label htmlFor="baseline_reason">Remark / Reason</Label>
+              <Textarea
+                id="baseline_reason"
+                placeholder="Enter a remark to document baselining..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
+                required
+              />
+            </div>
+          )}
           <DialogFooter className="mt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/95 text-white font-semibold" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Dialog for editing/revising goal details
+function EditGoalDialog({ open, onClose, goal, onSubmit, loading }) {
+  const [form, setForm] = useState({})
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    const init = () => {
+      if (open && goal) {
+        setForm({
+          goal_name: goal.goal_name || '',
+          desc: goal.desc || '',
+          how_to_measure: goal.how_to_measure || '',
+          weight: goal.weight || '',
+          deadline: goal.deadline ? goal.deadline.split('T')[0] : '',
+          target_value: goal.target_value || '',
+          target_date: goal.target_date || '',
+          target_state: goal.target_state || '',
+        })
+        setReason('')
+      }
+    }
+    init()
+  }, [open, goal])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!form.goal_name?.trim()) {
+      toast.error('Goal name is required')
+      return
+    }
+    if (goal.status === 2 && !reason.trim()) {
+      toast.error('Revision reason is required')
+      return
+    }
+    onSubmit({ ...form, reason })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{goal?.status === 2 ? 'Revise Goal' : 'Edit Goal'}</DialogTitle>
+          <DialogDescription>
+            {goal?.status === 2 ? 'Revision reason is required and will be logged.' : 'Update the goal details below.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit_goal_name">Goal Name</Label>
+            <Input id="edit_goal_name" value={form.goal_name} onChange={(e) => setForm(f => ({ ...f, goal_name: e.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit_desc">Description</Label>
+            <Textarea id="edit_desc" value={form.desc} onChange={(e) => setForm(f => ({ ...f, desc: e.target.value }))} rows={3} className="resize-none" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit_how_to_measure">How to Measure</Label>
+            <Textarea id="edit_how_to_measure" value={form.how_to_measure} onChange={(e) => setForm(f => ({ ...f, how_to_measure: e.target.value }))} rows={2} className="resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_weight">Weight</Label>
+              <Input id="edit_weight" type="number" min="0" max="100" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_deadline">Deadline</Label>
+              <Input id="edit_deadline" type="date" value={form.deadline} onChange={(e) => setForm(f => ({ ...f, deadline: e.target.value }))} />
+            </div>
+          </div>
+
+          {goal?.goal_type === 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="edit_target_value">Target Value</Label>
+              <Input id="edit_target_value" type="number" value={form.target_value} onChange={(e) => setForm(f => ({ ...f, target_value: e.target.value }))} />
+            </div>
+          )}
+          {goal?.goal_type === 2 && (
+            <div className="space-y-2">
+              <Label htmlFor="edit_target_date">Target Date</Label>
+              <Input id="edit_target_date" type="date" value={form.target_date} onChange={(e) => setForm(f => ({ ...f, target_date: e.target.value }))} />
+            </div>
+          )}
+          {goal?.goal_type === 3 && (
+            <div className="space-y-2">
+              <Label htmlFor="edit_target_state">Target State</Label>
+              <Input id="edit_target_state" value={form.target_state} onChange={(e) => setForm(f => ({ ...f, target_state: e.target.value }))} />
+            </div>
+          )}
+
+          {goal?.status === 2 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <Label htmlFor="edit_reason" className="text-red-600 font-semibold">Revision Reason (Remark)</Label>
+              <Textarea id="edit_reason" placeholder="Enter reason for revision..." value={reason} onChange={(e) => setReason(e.target.value)} rows={2} required />
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/95 text-white font-semibold" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Dialog for status change remarks
+function StatusChangeDialog({ open, onClose, targetStatus, onSubmit, loading }) {
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    const init = () => {
+      if (open) setReason('')
+    }
+    init()
+  }, [open])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!reason.trim()) {
+      toast.error('Remark/Reason is required')
+      return
+    }
+    onSubmit(reason)
+  }
+
+  const getTitle = () => {
+    if (targetStatus === 2) return 'Baseline Goal'
+    if (targetStatus === 3) return 'Mark Goal Successful'
+    if (targetStatus === 4) return 'Mark Goal Failed'
+    if (targetStatus === 5) return 'Archive Goal'
+    return 'Change Status'
+  }
+
+  const isArchive = targetStatus === 5
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{getTitle()}</DialogTitle>
+          <DialogDescription>
+            {isArchive ? (
+              <span className="text-amber-600 font-semibold block mb-2">
+                ⚠️ Archived Goals cannot be edited. Do you want to proceed?
+              </span>
+            ) : (
+              'Enter a remark to document this status transition.'
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="status_change_reason">Remark / Reason</Label>
+            <Textarea
+              id="status_change_reason"
+              placeholder="Enter your remark..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              required
+            />
+          </div>
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" className={cn("text-white font-semibold", isArchive ? "bg-amber-600 hover:bg-amber-700" : "bg-primary hover:bg-primary/95")} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
             </Button>
           </DialogFooter>
@@ -152,8 +362,9 @@ export default function GoalDetailPage() {
   const [loading, setLoading] = useState(true)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-  const [dialog, setDialog] = useState(null) // 'baseline' | 'result'
+  const [dialog, setDialog] = useState(null) // 'baseline' | 'result' | 'revise'
   const [currentUser, setCurrentUser] = useState(null)
+  const [statusChangeTarget, setStatusChangeTarget] = useState(null)
 
   const fetchGoal = async () => {
     try {
@@ -179,11 +390,13 @@ export default function GoalDetailPage() {
     init()
   }, [goal_no])
 
-  const handleStatusChange = async (status) => {
+  const handleStatusChangeSubmit = async (reason) => {
+    if (!statusChangeTarget) return
     setActionLoading(true)
     try {
-      await goalsApi.updateStatus(goal_no, status)
+      await goalsApi.updateStatus(goal_no, { status: statusChangeTarget, reason })
       toast.success('Goal status updated')
+      setStatusChangeTarget(null)
       fetchGoal()
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to update status')
@@ -201,6 +414,9 @@ export default function GoalDetailPage() {
       } else if (dialog === 'result') {
         await goalsApi.updateResult(goal_no, values)
         toast.success('Result updated successfully')
+      } else if (dialog === 'revise') {
+        await goalsApi.update(goal_no, values)
+        toast.success('Goal updated successfully')
       }
       setDialog(null)
       fetchGoal()
@@ -290,6 +506,154 @@ export default function GoalDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to Goals
       </Link>
 
+      {/* Stepper Card */}
+      <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white p-6 font-sans">
+        {/* Stepper Steps visual line */}
+        <div className="flex items-center justify-between w-full mb-6 px-4">
+          <div className="flex items-center flex-1">
+            <div className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full font-semibold text-xs border-2 shrink-0",
+              status >= 1 ? "bg-primary text-white border-primary" : "border-slate-300 text-slate-400"
+            )}>
+              1
+            </div>
+            <div className="ml-2 hidden sm:block">
+              <p className="text-xs font-bold text-slate-800">Draft</p>
+              <p className="text-[10px] text-slate-400">Created Mode</p>
+            </div>
+          </div>
+          
+          <div className={cn("h-0.5 flex-grow bg-slate-200 mx-4", status >= 2 && "bg-primary")} />
+
+          <div className="flex items-center flex-grow-0 sm:flex-grow">
+            <div className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full font-semibold text-xs border-2 shrink-0",
+              status >= 2 ? "bg-primary text-white border-primary" : "border-slate-300 text-slate-400"
+            )}>
+              2
+            </div>
+            <div className="ml-2 hidden sm:block">
+              <p className="text-xs font-bold text-slate-800">Baselined</p>
+              <p className="text-[10px] text-slate-400">Active Mode</p>
+            </div>
+          </div>
+
+          <div className={cn("h-0.5 flex-grow bg-slate-200 mx-4", status >= 3 && "bg-primary")} />
+
+          <div className="flex items-center flex-1">
+            <div className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full font-semibold text-xs border-2 shrink-0",
+              status === 3 ? "bg-[#28a745] text-white border-[#28a745]" :
+              status === 4 ? "bg-[#dc3545] text-white border-[#dc3545]" :
+              status === 5 ? "bg-[#ffc107] text-white border-[#ffc107]" :
+              "border-slate-300 text-slate-400"
+            )}>
+              3
+            </div>
+            <div className="ml-2 hidden sm:block">
+              <p className="text-xs font-bold text-slate-800">
+                {status === 3 ? "Succeeded" : status === 4 ? "Failed" : status === 5 ? "Archived" : "Outcome"}
+              </p>
+              <p className="text-[10px] text-slate-400">Final State</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stepper Status Info & Action buttons (only if not read-only) */}
+        {!isReadOnly && (
+          <div className="border-t border-slate-100 pt-4 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Status Actions</p>
+              <p className="text-sm text-slate-700 mt-1 font-medium">
+                Current State: <span className="font-bold text-primary">{status === 1 ? 'Draft (Created)' : status === 2 ? 'Active (Baselined)' : status === 3 ? 'Successful' : status === 4 ? 'Failed' : 'Archived'}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {status === 1 && (
+                <>
+                  <Button
+                    onClick={() => setDialog('baseline')}
+                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
+                    disabled={actionLoading}
+                  >
+                    Baseline Goal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStatusChangeTarget(5)}
+                    disabled={actionLoading}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <Archive className="mr-2 h-4 w-4" /> Archive
+                  </Button>
+                </>
+              )}
+              {status === 2 && (
+                <>
+                  <Button
+                    onClick={() => setDialog('result')}
+                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
+                    disabled={actionLoading}
+                  >
+                    Update Progress
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStatusChangeTarget(3)}
+                    disabled={actionLoading}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Mark Successful
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStatusChangeTarget(4)}
+                    disabled={actionLoading}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" /> Mark Failed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStatusChangeTarget(5)}
+                    disabled={actionLoading}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <Archive className="mr-2 h-4 w-4" /> Archive
+                  </Button>
+                </>
+              )}
+              {status === 3 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setStatusChangeTarget(2)}
+                  disabled={actionLoading}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Re-open (Set back to Baselined)
+                </Button>
+              )}
+              {status === 4 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setStatusChangeTarget(2)}
+                  disabled={actionLoading}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Re-open (Set back to Baselined)
+                </Button>
+              )}
+              {status === 5 && (
+                <span className="text-xs text-slate-400 font-medium italic select-none">
+                  Archived goal cannot be changed anymore.
+                </span>
+              )}
+              {actionLoading && <Loader2 className="h-5 w-5 animate-spin text-primary self-center" />}
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* Goal info card */}
       <Card className="border border-slate-200 border-t-[3px] border-t-primary shadow-sm rounded-none bg-white">
         <CardContent className="p-6">
@@ -307,6 +671,16 @@ export default function GoalDetailPage() {
                 </div>
               </div>
             </div>
+            {!isReadOnly && goal.status <= 2 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDialog('revise')}
+                className="h-8 text-xs font-semibold shrink-0"
+              >
+                {goal.status === 2 ? 'Revise Goal' : 'Edit Goal'}
+              </Button>
+            )}
           </div>
 
           {/* Details grid */}
@@ -324,14 +698,20 @@ export default function GoalDetailPage() {
                 </p>
               </div>
             )}
+            {goal.revision_count > 0 && (
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Revisions</p>
+                <p className="mt-1 font-semibold text-indigo-600">{goal.revision_count}</p>
+              </div>
+            )}
           </div>
 
-          {goal.description && (
+          {goal.desc && (
             <>
               <Separator className="my-4" />
               <div>
                 <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1.5">Description</p>
-                <p className="text-sm text-slate-600 leading-relaxed">{goal.description}</p>
+                <p className="text-sm text-slate-600 leading-relaxed">{goal.desc}</p>
               </div>
             </>
           )}
@@ -402,73 +782,8 @@ export default function GoalDetailPage() {
         </Card>
       )}
 
-      {/* Action buttons */}
-      {!isReadOnly && (
-        <Card className="border border-slate-200 shadow-sm rounded-none bg-white">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-2">
-              {status === 1 && (
-                <>
-                  <Button
-                    onClick={() => setDialog('baseline')}
-                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
-                    disabled={actionLoading}
-                  >
-                    Set Baseline
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusChange(5)}
-                    disabled={actionLoading}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    <Archive className="mr-2 h-4 w-4" /> Archive
-                  </Button>
-                </>
-              )}
-              {status === 2 && (
-                <>
-                  <Button
-                    onClick={() => setDialog('result')}
-                    className="bg-primary hover:bg-primary/95 text-white font-semibold"
-                    disabled={actionLoading}
-                  >
-                    Update Result
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusChange(3)}
-                    disabled={actionLoading}
-                    className="border-green-300 text-green-700 hover:bg-green-50"
-                  >
-                    <CheckCircle2 className="mr-2 h-4 w-4" /> Mark Successful
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusChange(4)}
-                    disabled={actionLoading}
-                    className="border-red-300 text-red-700 hover:bg-red-50"
-                  >
-                    <XCircle className="mr-2 h-4 w-4" /> Mark Failed
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusChange(5)}
-                    disabled={actionLoading}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    <Archive className="mr-2 h-4 w-4" /> Archive
-                  </Button>
-                </>
-              )}
-              {actionLoading && <Loader2 className="h-5 w-5 animate-spin text-primary self-center" />}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Reviewers */}
-      <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} />
+      <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} status={goal.status} />
 
       {/* Comments */}
       <CommentThread goalNo={goal_no} readOnly={isReadOnly} />
@@ -499,13 +814,31 @@ export default function GoalDetailPage() {
         fields={getBaselineFields()}
         onSubmit={handleDialogSubmit}
         loading={actionLoading}
+        isBaseline={true}
       />
       <ActionDialog
         open={dialog === 'result'}
         onClose={() => setDialog(null)}
-        title="Update Result"
+        title="Update Progress"
         fields={getResultFields()}
         onSubmit={handleDialogSubmit}
+        loading={actionLoading}
+        isBaseline={false}
+      />
+
+      <EditGoalDialog
+        open={dialog === 'revise'}
+        onClose={() => setDialog(null)}
+        goal={goal}
+        onSubmit={handleDialogSubmit}
+        loading={actionLoading}
+      />
+
+      <StatusChangeDialog
+        open={statusChangeTarget !== null}
+        onClose={() => setStatusChangeTarget(null)}
+        targetStatus={statusChangeTarget}
+        onSubmit={handleStatusChangeSubmit}
         loading={actionLoading}
       />
     </div>
