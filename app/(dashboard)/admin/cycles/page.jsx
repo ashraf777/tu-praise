@@ -1,35 +1,37 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { cyclesApi, clientsApi } from '@/lib/api'
+import { cyclesApi } from '@/lib/api'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { RefreshCw, Plus, Lock, Unlock, Loader2 } from 'lucide-react'
+import { RefreshCw, Plus, Lock, Unlock, Loader2, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 
-function CycleModal({ open, onClose, onSave, clients }) {
-  const [form, setForm] = useState({ cycle_name: '', comp_id: '', year: '', start_date: '', end_date: '' })
+// ── Create Modal ──────────────────────────────────────────────────────────────
+function CycleModal({ open, onClose, onSave }) {
+  const [form, setForm] = useState({ cycle_name: '', year: '', start_date: '', end_date: '' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    const init = () => {
-      if (open) setForm({ cycle_name: '', comp_id: '', year: new Date().getFullYear().toString(), start_date: '', end_date: '' })
+  const [prevOpen, setPrevOpen] = useState(open)
+
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setForm({ cycle_name: '', year: new Date().getFullYear().toString(), start_date: '', end_date: '' })
     }
-    init()
-  }, [open])
+  }
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: typeof v === 'string' ? v : v.target.value }))
 
   const handleSave = async () => {
-    if (!form.cycle_name || !form.comp_id || !form.year || !form.start_date || !form.end_date) {
+    if (!form.cycle_name || !form.year || !form.start_date || !form.end_date) {
       toast.error('All fields are required')
       return
     }
@@ -37,7 +39,6 @@ function CycleModal({ open, onClose, onSave, clients }) {
     try {
       await cyclesApi.create({
         cycle_name: form.cycle_name,
-        comp_id: parseInt(form.comp_id),
         year: parseInt(form.year),
         start_date: form.start_date,
         end_date: form.end_date,
@@ -58,31 +59,16 @@ function CycleModal({ open, onClose, onSave, clients }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Performance Cycle</DialogTitle>
-          <DialogDescription>Create a new appraisal cycle.</DialogDescription>
+          <DialogDescription>Create a new appraisal cycle for your organization.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div className="space-y-2">
             <Label>Cycle Name</Label>
             <Input placeholder="e.g. H1 2025" value={form.cycle_name} onChange={set('cycle_name')} className="h-10" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <Select value={form.comp_id} onValueChange={set('comp_id')}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select client…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c.client_no} value={String(c.client_no)}>{c.client_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Year</Label>
-              <Input type="number" placeholder="2025" value={form.year} onChange={set('year')} className="h-10" />
-            </div>
+          <div className="space-y-2">
+            <Label>Year</Label>
+            <Input type="number" placeholder="2025" value={form.year} onChange={set('year')} className="h-10" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -106,21 +92,105 @@ function CycleModal({ open, onClose, onSave, clients }) {
   )
 }
 
+// ── Edit Modal ────────────────────────────────────────────────────────────────
+function EditCycleModal({ open, cycle, onClose, onSave }) {
+  const [form, setForm] = useState({ cycle_name: '', year: '', start_date: '', end_date: '' })
+  const [saving, setSaving] = useState(false)
+
+  const [prevOpen, setPrevOpen] = useState(open)
+  const [prevCycle, setPrevCycle] = useState(cycle)
+
+  if (open !== prevOpen || cycle !== prevCycle) {
+    setPrevOpen(open)
+    setPrevCycle(cycle)
+    if (open && cycle) {
+      // cycle_start / cycle_end from backend; fall back to start_date / end_date
+      const startRaw = cycle.cycle_start || cycle.start_date || ''
+      const endRaw   = cycle.cycle_end   || cycle.end_date   || ''
+      setForm({
+        cycle_name: cycle.cycle_name || '',
+        year:       String(cycle.year || ''),
+        start_date: startRaw ? startRaw.substring(0, 10) : '',
+        end_date:   endRaw   ? endRaw.substring(0, 10)   : '',
+      })
+    }
+  }
+
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: typeof v === 'string' ? v : v.target.value }))
+
+  const handleSave = async () => {
+    if (!form.cycle_name || !form.year || !form.start_date || !form.end_date) {
+      toast.error('All fields are required')
+      return
+    }
+    setSaving(true)
+    try {
+      await cyclesApi.update(cycle.cycle_no, {
+        cycle_name: form.cycle_name,
+        year: parseInt(form.year),
+        cycle_start: form.start_date,
+        cycle_end: form.end_date,
+      })
+      toast.success('Cycle updated')
+      onSave()
+      onClose()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to update cycle')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Performance Cycle</DialogTitle>
+          <DialogDescription>Update the cycle name, year, or dates.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label>Cycle Name</Label>
+            <Input placeholder="e.g. H1 2025" value={form.cycle_name} onChange={set('cycle_name')} className="h-10" />
+          </div>
+          <div className="space-y-2">
+            <Label>Year</Label>
+            <Input type="number" placeholder="2025" value={form.year} onChange={set('year')} className="h-10" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Input type="date" value={form.start_date} onChange={set('start_date')} className="h-10" />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input type="date" value={form.end_date} onChange={set('end_date')} className="h-10" />
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CyclesPage() {
   const [cycles, setCycles] = useState([])
-  const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
+  const [editCycle, setEditCycle] = useState(null)   // cycle being edited
   const [toggling, setToggling] = useState(null)
 
   const fetchData = async () => {
     try {
-      const [cycRes, clientRes] = await Promise.all([
-        cyclesApi.listAdmin(),
-        clientsApi.list(),
-      ])
+      const cycRes = await cyclesApi.listAdmin()
       setCycles(cycRes.data?.cycles || cycRes.data?.data || (Array.isArray(cycRes.data) ? cycRes.data : []))
-      setClients(clientRes.data?.clients || clientRes.data?.data || (Array.isArray(clientRes.data) ? clientRes.data : []))
     } catch (err) {
       console.error('Cycles error:', err)
     } finally {
@@ -128,7 +198,10 @@ export default function CyclesPage() {
     }
   }
 
-  useEffect(() => { const init = () => fetchData(); init() }, [])
+  useEffect(() => {
+    const init = () => fetchData()
+    init()
+  }, [])
 
   const handleToggleStatus = async (cycle) => {
     const newStatus = cycle.status === 1 ? 0 : 1
@@ -186,7 +259,6 @@ export default function CyclesPage() {
                 <TableHeader>
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
                     <TableHead className="pl-6 font-semibold text-xs uppercase text-slate-500">Cycle Name</TableHead>
-                    <TableHead className="font-semibold text-xs uppercase text-slate-500">Client</TableHead>
                     <TableHead className="font-semibold text-xs uppercase text-slate-500">Year</TableHead>
                     <TableHead className="font-semibold text-xs uppercase text-slate-500">Start</TableHead>
                     <TableHead className="font-semibold text-xs uppercase text-slate-500">End</TableHead>
@@ -205,13 +277,16 @@ export default function CyclesPage() {
                           <span className="font-medium text-slate-800 text-sm">{cycle.cycle_name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">{cycle.client?.client_name || '—'}</TableCell>
                       <TableCell className="text-sm text-slate-600">{cycle.year}</TableCell>
                       <TableCell className="text-sm text-slate-500">
-                        {cycle.start_date ? format(new Date(cycle.start_date), 'MMM d, yyyy') : '—'}
+                        {(cycle.cycle_start || cycle.start_date)
+                          ? format(new Date(cycle.cycle_start || cycle.start_date), 'MMM d, yyyy')
+                          : '—'}
                       </TableCell>
                       <TableCell className="text-sm text-slate-500">
-                        {cycle.end_date ? format(new Date(cycle.end_date), 'MMM d, yyyy') : '—'}
+                        {(cycle.cycle_end || cycle.end_date)
+                          ? format(new Date(cycle.cycle_end || cycle.end_date), 'MMM d, yyyy')
+                          : '—'}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -224,9 +299,22 @@ export default function CyclesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="pr-6">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end items-center gap-1">
+                          {/* Edit button */}
                           <Button
-                            variant="ghost" size="sm"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={() => setEditCycle(cycle)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            <span className="text-xs">Edit</span>
+                          </Button>
+
+                          {/* Open / Close toggle */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-8 px-3"
                             onClick={() => handleToggleStatus(cycle)}
                             disabled={toggling === cycle.cycle_no}
@@ -234,9 +322,13 @@ export default function CyclesPage() {
                             {toggling === cycle.cycle_no ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : cycle.status === 1 ? (
-                              <span className="flex items-center gap-1 text-amber-600 text-xs"><Lock className="h-3.5 w-3.5" /> Close</span>
+                              <span className="flex items-center gap-1 text-amber-600 text-xs">
+                                <Lock className="h-3.5 w-3.5" /> Close
+                              </span>
                             ) : (
-                              <span className="flex items-center gap-1 text-green-600 text-xs"><Unlock className="h-3.5 w-3.5" /> Open</span>
+                              <span className="flex items-center gap-1 text-green-600 text-xs">
+                                <Unlock className="h-3.5 w-3.5" /> Open
+                              </span>
                             )}
                           </Button>
                         </div>
@@ -250,7 +342,16 @@ export default function CyclesPage() {
         </CardContent>
       </Card>
 
-      <CycleModal open={modal} onClose={() => setModal(false)} onSave={fetchData} clients={clients} />
+      {/* Create modal */}
+      <CycleModal open={modal} onClose={() => setModal(false)} onSave={fetchData} />
+
+      {/* Edit modal */}
+      <EditCycleModal
+        open={!!editCycle}
+        cycle={editCycle}
+        onClose={() => setEditCycle(null)}
+        onSave={fetchData}
+      />
     </div>
   )
 }

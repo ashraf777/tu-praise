@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MessageSquare, Send, Trash2, Loader2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import { MessageSquare, Send, Trash2, Loader2, ShieldCheck } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
 
 function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
@@ -59,10 +60,20 @@ export function CommentThread({ goalNo, readOnly }) {
   const handleDelete = async (commentNo) => {
     try {
       await goalsApi.deleteComment(goalNo, commentNo)
-      setComments((c) => c.filter((cm) => cm.comment_no !== commentNo))
+      setComments((c) => c.filter((cm) => cm.goal_comment_no !== commentNo))
       toast.success('Comment deleted')
     } catch {
       toast.error('Failed to delete comment')
+    }
+  }
+
+  const formatTimestamp = (dateStr) => {
+    if (!dateStr) return ''
+    try {
+      const d = new Date(dateStr)
+      return `${format(d, 'MMM d, yyyy HH:mm')} (${formatDistanceToNow(d, { addSuffix: true })})`
+    } catch {
+      return ''
     }
   }
 
@@ -96,30 +107,41 @@ export function CommentThread({ goalNo, readOnly }) {
         ) : (
           <div className="space-y-4">
             {comments.map((c) => {
-              const isOwn = !readOnly && (c.author || c.employee)?.employee_no === currentEmployee?.employee_no
+              const author = c.author || c.employee
+              const isAdmin = author?.role === 'hr_admin'
+              const isOwn = !readOnly && author?.employee_no === currentEmployee?.employee_no
+              // Use `created` field (no timestamps on this model)
+              const timestamp = formatTimestamp(c.created || c.created_at)
+
               return (
-                <div key={c.comment_no} className="flex gap-3 group">
-                  <Avatar className="h-8 w-8 shrink-0 bg-slate-100 border border-slate-200">
-                    <AvatarFallback className="bg-slate-100 text-slate-700 text-xs font-semibold">
-                      {getInitials((c.author || c.employee)?.employee_name || (c.author || c.employee)?.name)}
+                <div
+                  key={c.goal_comment_no}
+                  className={`flex gap-3 group rounded-lg p-2 -mx-2 transition-colors ${isAdmin ? 'bg-indigo-50/60 border border-indigo-100' : ''}`}
+                >
+                  <Avatar className={`h-8 w-8 shrink-0 border ${isAdmin ? 'bg-indigo-100 border-indigo-200' : 'bg-slate-100 border-slate-200'}`}>
+                    <AvatarFallback className={`text-xs font-semibold ${isAdmin ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'}`}>
+                      {isAdmin ? <ShieldCheck className="h-4 w-4" /> : getInitials(author?.employee_name || author?.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-xs font-semibold text-slate-800">{(c.author || c.employee)?.employee_name || (c.author || c.employee)?.name || 'Unknown'}</span>
-                      <span className="text-[10px] text-slate-400">
-                        {c.created_at
-                          ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true })
-                          : ''}
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-xs font-semibold ${isAdmin ? 'text-indigo-800' : 'text-slate-800'}`}>
+                        {author?.employee_name || author?.name || 'Unknown'}
                       </span>
+                      {isAdmin && (
+                        <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 h-4 font-semibold">
+                          Admin
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-slate-400">{timestamp}</span>
                     </div>
-                    <div className="rounded bg-slate-50 border border-slate-100 px-3 py-2">
-                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{c.message}</p>
+                    <div className={`rounded px-3 py-2 ${isAdmin ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-slate-100'}`}>
+                      <p className={`text-xs leading-relaxed whitespace-pre-wrap ${isAdmin ? 'text-indigo-900' : 'text-slate-700'}`}>{c.message}</p>
                     </div>
                   </div>
                   {isOwn && (
                     <button
-                      onClick={() => handleDelete(c.comment_no)}
+                      onClick={() => handleDelete(c.goal_comment_no)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 self-start mt-1 cursor-pointer"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

@@ -1,18 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building2, Users, RefreshCw, ShieldCheck, ChevronRight } from 'lucide-react'
+import { Target, Users, RefreshCw, ShieldCheck, ChevronRight } from 'lucide-react'
 
 const ADMIN_SECTIONS = [
-  {
-    href: '/admin/clients',
-    title: 'Clients',
-    description: 'Manage client organizations',
-    icon: Building2,
-    color: 'bg-indigo-50 text-indigo-600',
-  },
   {
     href: '/admin/employees',
     title: 'Employees',
@@ -26,6 +19,13 @@ const ADMIN_SECTIONS = [
     description: 'Manage appraisal cycles and periods',
     icon: RefreshCw,
     color: 'bg-green-50 text-green-600',
+  },
+  {
+    href: '/admin/goals',
+    title: 'All Goals',
+    description: 'View and comment on employee goals',
+    icon: Target,
+    color: 'bg-indigo-50 text-indigo-600',
   },
 ]
 

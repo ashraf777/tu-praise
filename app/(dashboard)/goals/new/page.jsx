@@ -108,7 +108,7 @@ export default function NewGoalPage() {
     }
 
     if (form.employee_no && form.employee_no !== 'myself') {
-      payload.employee_no = parseInt(form.employee_no)
+      // no-op: goals are always created for the current user
     }
 
     const gt = parseInt(form.goal_type)
@@ -201,24 +201,7 @@ export default function NewGoalPage() {
               </Select>
             </div>
 
-            {(currentUser?.role === 'supervisor' || currentUser?.role === 'hr_admin') && (
-              <div className="space-y-2">
-                <Label>Assign To</Label>
-                <Select value={form.employee_no} onValueChange={set('employee_no')}>
-                  <SelectTrigger className="bg-slate-50 border-slate-200">
-                    <SelectValue placeholder="Myself (Default)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="myself">Myself (Default)</SelectItem>
-                    {employees.map((e) => (
-                      <SelectItem key={e.employee_no} value={String(e.employee_no)}>
-                        {e.employee_name || e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
 
             {/* Goal name */}
             <div className="space-y-2">

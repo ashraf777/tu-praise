@@ -267,7 +267,7 @@ function EditGoalDialog({ open, onClose, goal, onSubmit, loading }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="edit_weight">Weight</Label>
-              <Input id="edit_weight" type="number" min="0" max="100" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} />
+              <Input id="edit_weight" type="number" min="0" value={form.weight} onChange={(e) => setForm(f => ({ ...f, weight: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_deadline">Deadline</Label>
