@@ -10,7 +10,8 @@ import { authApi, saveAuth } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [company, setCompany] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,28 +20,24 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
 
-    if (!email || !password) {
-      setError('Please enter your User (Email) and Password.')
+    if (!company || !username || !password) {
+      setError('Please enter Company, User, and Password.')
       return
     }
 
     setLoading(true)
     try {
-      const res = await authApi.login(email, password)
+      const res = await authApi.login(company, username, password)
       const { token, employee } = res.data
 
       saveAuth(token, employee)
       toast.success(`Welcome back, ${employee.name || employee.employee_name}!`)
-
-      if (employee.must_change_pass === 1) {
-        router.replace('/change-password')
-      } else {
-        router.replace('/dashboard')
-      }
+      router.replace('/dashboard')
     } catch (err) {
+      console.error('Login error:', err)
       const msg = err?.response?.data?.message || 'Invalid credentials. Please try again.'
       setError(msg)
-      toast.error('Login failed')
+      toast.error(msg || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -49,8 +46,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex bg-white font-sans">
       {/* Left panel: Modern aesthetic image */}
-      <div 
-        className="hidden md:block md:w-1/2 lg:w-7/12 bg-cover bg-center shrink-0" 
+      <div
+        className="hidden md:block md:w-1/2 lg:w-7/12 bg-cover bg-center shrink-0"
         style={{ backgroundImage: "url('/login_bg.png')" }}
       />
 
@@ -72,15 +69,26 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* User (Email) input */}
+            {/* Company input */}
             <div className="space-y-1">
               <Input
-                type="email"
-                placeholder="User"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
                 disabled={loading}
-                autoComplete="email"
+                className="h-14 px-5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all text-base"
+              />
+            </div>
+
+            {/* User (Username) input */}
+            <div className="space-y-1">
+              <Input
+                type="text"
+                placeholder="User"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
                 className="h-14 px-5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all text-base"
               />
             </div>
@@ -93,7 +101,6 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                autoComplete="current-password"
                 className="h-14 px-5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all text-base"
               />
             </div>
@@ -119,7 +126,7 @@ export default function LoginPage() {
 
           {/* Footer branding */}
           <p className="text-center text-[11px] text-slate-400 mt-12 font-medium">
-            © {new Date().getFullYear()} TU Praise · All rights reserved · v1.0.4
+            © {new Date().getFullYear()} TU Praise · All rights reserved · v1.0.5
           </p>
         </div>
       </div>
