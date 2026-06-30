@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { authApi, saveAuth } from '@/lib/auth'
 
 export default function LoginPage() {
@@ -21,7 +20,7 @@ export default function LoginPage() {
     setError('')
 
     if (!email || !password) {
-      setError('Please enter your email and password.')
+      setError('Please enter your User (Email) and Password.')
       return
     }
 
@@ -48,83 +47,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* AdminLTE style Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-light text-slate-800 tracking-tight">
-            <span className="font-bold">TU</span>Praise
-          </h1>
-        </div>
+    <div className="min-h-screen flex bg-white font-sans">
+      {/* Left panel: Modern aesthetic image */}
+      <div 
+        className="hidden md:block md:w-1/2 lg:w-7/12 bg-cover bg-center shrink-0" 
+        style={{ backgroundImage: "url('/login_bg.png')" }}
+      />
 
-        <Card className="rounded-none border border-slate-200 shadow-md bg-white">
-          <CardHeader className="pb-4 pt-6 text-center">
-            <CardDescription className="text-slate-600 text-sm">Sign in to start your session</CardDescription>
-          </CardHeader>
+      {/* Right panel: Login form */}
+      <div className="w-full md:w-1/2 lg:w-5/12 flex items-center justify-center bg-[#f8f9fa] p-8 sm:p-12 md:p-16 lg:p-24">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl sm:text-4xl font-normal text-slate-800 tracking-tight">
+              Login to TU Praise
+            </h1>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 pb-6">
-              {/* Error alert */}
-              {error && (
-                <div className="rounded bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {/* Email Address */}
-              <div className="space-y-1 relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  autoComplete="email"
-                  className="h-10 pr-10 rounded-none border-slate-300 focus:border-primary"
-                />
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Error display */}
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
+                {error}
               </div>
+            )}
 
-              {/* Password */}
-              <div className="space-y-1 relative">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  autoComplete="current-password"
-                  className="h-10 pr-10 rounded-none border-slate-300 focus:border-primary"
-                />
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              </div>
+            {/* User (Email) input */}
+            <div className="space-y-1">
+              <Input
+                type="email"
+                placeholder="User"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                autoComplete="email"
+                className="h-14 px-5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all text-base"
+              />
+            </div>
 
-              {/* Actions */}
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  className="w-full h-10 bg-primary hover:bg-primary/95 text-white font-semibold text-sm rounded-none shadow-sm cursor-pointer"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in…
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </div>
-            </CardContent>
+            {/* Password input */}
+            <div className="space-y-1">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="current-password"
+                className="h-14 px-5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all text-base"
+              />
+            </div>
+
+            {/* Submit button */}
+            <div className="pt-4">
+              <Button
+                type="submit"
+                className="w-full h-14 bg-[#5c6bc0] hover:bg-[#4c5ab0] text-white font-bold text-sm tracking-wider uppercase rounded-xl shadow-md transition-all duration-200 flex items-center justify-center cursor-pointer"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in…
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </Button>
+            </div>
           </form>
-        </Card>
 
-        <p className="text-center text-[10px] text-slate-400 mt-6">
-          © {new Date().getFullYear()} TU Praise · All rights reserved · <span className="text-[10px] text-slate-400 mt-1 select-none">v1.0.3</span>
-        </p>
+          {/* Footer branding */}
+          <p className="text-center text-[11px] text-slate-400 mt-12 font-medium">
+            © {new Date().getFullYear()} TU Praise · All rights reserved · v1.0.4
+          </p>
+        </div>
       </div>
     </div>
   )
