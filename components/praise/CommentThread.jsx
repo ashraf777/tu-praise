@@ -75,7 +75,7 @@ export function CommentThread({ goalNo, readOnly }) {
         formattedStr = dateStr.replace(' ', 'T') + 'Z'
       }
       const d = new Date(formattedStr)
-      return `${format(d, 'MMM d, yyyy HH:mm')} (${formatDistanceToNow(d, { addSuffix: true })})`
+      return `${format(d, 'MMM d, yyyy hh:mm a')} (${formatDistanceToNow(d, { addSuffix: true })})`
     } catch {
       return ''
     }
