@@ -74,12 +74,12 @@ export function ReviewerSection({ goalNo, readOnly, status }) {
     }
   }
 
-  const handleRemove = async (reviewerNo) => {
-    setRemoving(reviewerNo)
+  const handleRemove = async (goalReviewerNo) => {
+    setRemoving(goalReviewerNo)
     try {
-      await goalsApi.removeReviewer(goalNo, reviewerNo)
+      await goalsApi.removeReviewer(goalNo, goalReviewerNo)
       toast.success('Reviewer removed')
-      setReviewers((r) => r.filter((rv) => rv.reviewer_no !== reviewerNo))
+      setReviewers((r) => r.filter((rv) => rv.goal_reviewer_no !== goalReviewerNo))
     } catch {
       toast.error('Failed to remove reviewer')
     } finally {
@@ -129,7 +129,7 @@ export function ReviewerSection({ goalNo, readOnly, status }) {
         ) : (
           <div className="space-y-2">
             {reviewers.map((r) => (
-              <div key={r.reviewer_no} className="flex items-center gap-3 rounded-lg hover:bg-slate-50 p-2 -mx-2">
+              <div key={r.goal_reviewer_no} className="flex items-center gap-3 rounded-lg hover:bg-slate-50 p-2 -mx-2">
                 <Avatar className="h-9 w-9 bg-slate-100 border border-slate-200">
                   <AvatarFallback className="bg-slate-100 text-slate-700 text-xs font-semibold">
                     {getInitials((r.reviewer_employee || r.employee)?.employee_name || (r.reviewer_employee || r.employee)?.name)}
@@ -141,11 +141,11 @@ export function ReviewerSection({ goalNo, readOnly, status }) {
                 </div>
                 {!isLocked && (
                   <button
-                    onClick={() => handleRemove(r.reviewer_no)}
-                    disabled={removing === r.reviewer_no}
+                    onClick={() => handleRemove(r.goal_reviewer_no)}
+                    disabled={removing === r.goal_reviewer_no}
                     className="p-1.5 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
                   >
-                    {removing === r.reviewer_no
+                    {removing === r.goal_reviewer_no
                       ? <Loader2 className="h-4 w-4 animate-spin" />
                       : <Trash2 className="h-4 w-4" />}
                   </button>
