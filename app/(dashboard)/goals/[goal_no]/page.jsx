@@ -77,8 +77,16 @@ function HistoryTimeline({ history, open }) {
               </p>
             )}
             <p className="text-slate-400 text-xs mt-0.5">
-              {item.created_at ? format(new Date(item.created_at), 'MMM d, yyyy HH:mm') : ''}
-              {(item.changed_by_employee || item.employee)?.name ? ` · ${(item.changed_by_employee || item.employee).name}` : ''}
+              {item.created_at
+                ? (() => {
+                    let formattedStr = item.created_at
+                    if (typeof item.created_at === 'string' && !item.created_at.includes('T') && !item.created_at.includes('Z') && !item.created_at.includes('+')) {
+                      formattedStr = item.created_at.replace(' ', 'T') + 'Z'
+                    }
+                    return format(new Date(formattedStr), 'MMM d, yyyy hh:mm a')
+                  })()
+                : ''}
+              {(item.changed_by_employee || item.employee)?.employee_name || (item.changed_by_employee || item.employee)?.name ? ` · ${(item.changed_by_employee || item.employee).employee_name || (item.changed_by_employee || item.employee).name}` : ''}
             </p>
           </div>
         </div>
