@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { isLoggedIn } from '@/lib/auth'
+import { isLoggedIn, getEmployee } from '@/lib/auth'
 
 export function AppShell({ children }) {
   const router = useRouter()
