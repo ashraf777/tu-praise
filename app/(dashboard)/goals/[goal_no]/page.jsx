@@ -815,7 +815,7 @@ export default function GoalDetailPage() {
       <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} status={goal.status} ownerNo={goal.employee_no} />
 
       {/* Comments */}
-      <CommentThread goalNo={goal_no} readOnly={isReadOnly} />
+      <CommentThread goalNo={goal_no} readOnly={false} />
 
       {/* History */}
       <Card className="border border-slate-200 shadow-sm rounded-none bg-white">

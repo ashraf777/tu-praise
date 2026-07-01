@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { isLoggedIn, getEmployee } from '@/lib/auth'
+import { isLoggedIn, getEmployee, authApi, saveAuth, clearAuth } from '@/lib/auth'
 
 export function AppShell({ children }) {
   const router = useRouter()
@@ -13,9 +13,10 @@ export function AppShell({ children }) {
   const [ctx, setCtx] = useState('web')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [employee, setEmployee] = useState(null)
 
   useEffect(() => {
-    const init = () => {
+    const init = async () => {
       setMounted(true)
       const params = new URLSearchParams(window.location.search)
       const ctxParam = params.get('ctx') || 'web'
@@ -24,15 +25,44 @@ export function AppShell({ children }) {
       // Auth check
       if (!isLoggedIn()) {
         router.replace('/login')
-      } else {
-        const emp = getEmployee()
-        if (pathname.startsWith('/admin') && emp?.role !== 'hr_admin') {
-          router.replace('/dashboard')
+        return
+      }
+
+      const emp = getEmployee()
+      setEmployee(emp)
+      if (pathname.startsWith('/admin') && emp?.role !== 'hr_admin') {
+        router.replace('/dashboard')
+      }
+      if (pathname.startsWith('/team') && emp?.role !== 'hr_admin' && emp?.role !== 'supervisor' && !emp?.is_reviewer) {
+        router.replace('/dashboard')
+      }
+
+      // Sync fresh profile from API
+      try {
+        const res = await authApi.me()
+        const updatedEmp = res.data?.employee || res.data?.data || res.data
+        if (updatedEmp) {
+          setEmployee(updatedEmp)
+          const token = localStorage.getItem('praise_token')
+          saveAuth(token, updatedEmp)
+          
+          if (pathname.startsWith('/admin') && updatedEmp.role !== 'hr_admin') {
+            router.replace('/dashboard')
+          }
+          if (pathname.startsWith('/team') && updatedEmp.role !== 'hr_admin' && updatedEmp.role !== 'supervisor' && !updatedEmp.is_reviewer) {
+            router.replace('/dashboard')
+          }
+        }
+      } catch (err) {
+        console.error('Profile sync failed:', err)
+        if (err?.response?.status === 401) {
+          clearAuth()
+          router.replace('/login')
         }
       }
     }
     init()
-  }, [router])
+  }, [router, pathname])
 
   if (!mounted) {
     return (
@@ -74,7 +104,7 @@ export function AppShell({ children }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+        <Sidebar employee={employee} onClose={() => setSidebarOpen(false)} />
       </div>
 
       {/* Main content */}

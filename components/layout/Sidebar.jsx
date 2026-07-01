@@ -23,16 +23,19 @@ const navItems = [
   { href: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['hr_admin'] },
 ]
 
-function SidebarContent({ onClose }) {
+function SidebarContent({ employee: propEmployee, onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [employee, setEmployee] = useState(null)
 
   useEffect(() => {
-    const init = () => setEmployee(getEmployee())
-    init()
-  }, [])
+    if (propEmployee) {
+      setEmployee(propEmployee)
+    } else {
+      setEmployee(getEmployee())
+    }
+  }, [propEmployee])
 
   const handleLogout = async () => {
     try {
@@ -46,6 +49,9 @@ function SidebarContent({ onClose }) {
   const role = employee?.role || ''
 
   const visibleItems = navItems.filter((item) => {
+    if (item.href === '/team') {
+      return ['hr_admin', 'supervisor'].includes(role) || !!employee?.is_reviewer
+    }
     if (item.roles.includes('*')) return true
     return item.roles.includes(role)
   })
