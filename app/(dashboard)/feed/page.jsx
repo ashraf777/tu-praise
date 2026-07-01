@@ -58,7 +58,13 @@ function FeedItem({ item }) {
           </div>
           <span className="text-xs text-slate-400 shrink-0">
             {item.created
-              ? formatDistanceToNow(new Date(item.created), { addSuffix: true })
+              ? (() => {
+                  let formattedStr = item.created
+                  if (typeof item.created === 'string' && !item.created.includes('T') && !item.created.includes('Z') && !item.created.includes('+')) {
+                    formattedStr = item.created.replace(' ', 'T') + 'Z'
+                  }
+                  return formatDistanceToNow(new Date(formattedStr), { addSuffix: true })
+                })()
               : ''}
           </span>
         </div>

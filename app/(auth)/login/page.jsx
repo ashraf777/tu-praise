@@ -126,7 +126,7 @@ export default function LoginPage() {
 
           {/* Footer branding */}
           <p className="text-center text-[11px] text-slate-400 mt-12 font-medium">
-            © {new Date().getFullYear()} TU Praise · All rights reserved · v1.0.5
+            © {new Date().getFullYear()} TU Praise · All rights reserved · v1.0.7
           </p>
         </div>
       </div>
