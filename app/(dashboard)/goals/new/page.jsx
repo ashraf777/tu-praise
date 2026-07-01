@@ -68,7 +68,13 @@ export default function NewGoalPage() {
     try {
       const res = await cyclesApi.list({ status: 1 })
       const data = res.data?.cycles || res.data?.data || (Array.isArray(res.data) ? res.data : [])
-      setCycles(data)
+      
+      // Sort cycle names in ascending order
+      const sortedCycles = [...data].sort((a, b) => 
+        (a.cycle_name || '').localeCompare(b.cycle_name || '', undefined, { numeric: true, sensitivity: 'base' })
+      )
+      
+      setCycles(sortedCycles)
     } catch (err) {
       console.error('Cycles error:', err)
       toast.error('Failed to load cycles')

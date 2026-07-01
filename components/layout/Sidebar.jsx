@@ -12,9 +12,9 @@ import {
   Award,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getEmployee, clearAuth, authApi } from '@/lib/auth'
+import { clearAuth, authApi } from '@/lib/auth'
 import { toast } from 'sonner'
-import { useEffect, useState, Suspense } from 'react'
+import { Suspense } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['*'] },
@@ -23,19 +23,10 @@ const navItems = [
   { href: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['hr_admin'] },
 ]
 
-function SidebarContent({ employee: propEmployee, onClose }) {
+function SidebarContent({ employee, onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [employee, setEmployee] = useState(null)
-
-  useEffect(() => {
-    if (propEmployee) {
-      setEmployee(propEmployee)
-    } else {
-      setEmployee(getEmployee())
-    }
-  }, [propEmployee])
 
   const handleLogout = async () => {
     try {
