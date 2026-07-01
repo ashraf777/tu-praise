@@ -24,6 +24,11 @@ export function AppShell({ children }) {
       // Auth check
       if (!isLoggedIn()) {
         router.replace('/login')
+      } else {
+        const emp = getEmployee()
+        if (pathname.startsWith('/admin') && emp?.role !== 'hr_admin') {
+          router.replace('/dashboard')
+        }
       }
     }
     init()

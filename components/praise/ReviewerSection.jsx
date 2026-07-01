@@ -18,7 +18,7 @@ function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-export function ReviewerSection({ goalNo, readOnly, status }) {
+export function ReviewerSection({ goalNo, readOnly, status, ownerNo }) {
   const [reviewers, setReviewers] = useState([])
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
@@ -171,7 +171,7 @@ export function ReviewerSection({ goalNo, readOnly, status }) {
                 </SelectTrigger>
                 <SelectContent>
                   {employees
-                    .filter((e) => e.employee_no !== currentUser?.employee_no)
+                    .filter((e) => e.employee_no !== currentUser?.employee_no && e.employee_no !== parseInt(ownerNo))
                     .map((e) => (
                       <SelectItem key={e.employee_no} value={String(e.employee_no)}>
                         {e.employee_name || e.name}

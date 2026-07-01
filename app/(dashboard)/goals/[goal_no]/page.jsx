@@ -526,7 +526,7 @@ export default function GoalDetailPage() {
     return Number(val).toLocaleString()
   }
 
-  const isReadOnly = goal && currentUser && parseInt(goal.created_by) === parseInt(currentUser.employee_no) && parseInt(goal.employee_no) !== parseInt(currentUser.employee_no)
+  const isReadOnly = goal && currentUser && parseInt(goal.employee_no) !== parseInt(currentUser.employee_no)
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -812,7 +812,7 @@ export default function GoalDetailPage() {
       )}
 
       {/* Reviewers */}
-      <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} status={goal.status} />
+      <ReviewerSection goalNo={goal_no} readOnly={isReadOnly} status={goal.status} ownerNo={goal.employee_no} />
 
       {/* Comments */}
       <CommentThread goalNo={goal_no} readOnly={isReadOnly} />

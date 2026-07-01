@@ -19,7 +19,7 @@ import { useEffect, useState, Suspense } from 'react'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['*'] },
   { href: '/goals', label: 'My Goals', icon: Target, roles: ['*'] },
-  { href: '/team', label: 'Team', icon: Users, roles: ['*'] },
+  { href: '/team', label: 'Team', icon: Users, roles: ['hr_admin', 'supervisor'] },
   { href: '/admin', label: 'Admin', icon: ShieldCheck, roles: ['hr_admin'] },
 ]
 
